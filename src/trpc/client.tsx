@@ -10,6 +10,14 @@ import { makeQueryClient } from "./query-client";
 import type { AppRouter } from "./routers/_app";
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
 let browserQueryClient: QueryClient;
+/**
+ * Provide a React Query client instance appropriate for the current environment.
+ *
+ * On the server this returns a new QueryClient each call; in the browser it
+ * returns a single cached QueryClient instance to preserve client state across renders.
+ *
+ * @returns A `QueryClient` instance — a fresh instance on the server, a cached singleton in the browser.
+ */
 function getQueryClient() {
   if (typeof window === "undefined") {
     // Server: always make a new query client
@@ -22,6 +30,11 @@ function getQueryClient() {
   if (!browserQueryClient) browserQueryClient = makeQueryClient();
   return browserQueryClient;
 }
+/**
+ * Compute the TRPC API endpoint URL appropriate for the current runtime.
+ *
+ * @returns The full TRPC API URL. In the browser this returns "/api/trpc"; on the server it prefixes "/api/trpc" with the value of `NEXT_PUBLIC_APP_URL`.
+ */
 function getUrl() {
   const base = (() => {
     if (typeof window !== "undefined") return "";
@@ -29,6 +42,15 @@ function getUrl() {
   })();
   return `${base}/api/trpc`;
 }
+/**
+ * Provides React Query and tRPC contexts to its descendant components.
+ *
+ * Wraps `props.children` with a `QueryClientProvider` and a `TRPCProvider`, supplying a shared React Query client and a stable tRPC client configured for the application's AppRouter.
+ *
+ * @param props - Component props.
+ * @param props.children - React nodes to render inside the providers.
+ * @returns The provider element tree that supplies tRPC and React Query clients to descendants.
+ */
 export function TRPCReactProvider(
   props: Readonly<{
     children: React.ReactNode;
