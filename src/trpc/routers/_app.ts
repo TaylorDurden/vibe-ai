@@ -1,6 +1,6 @@
-import { email, z } from "zod";
-import { baseProcedure, createTRPCRouter } from "../init";
+import { z } from "zod";
 import { inngest } from "@/inngest/client";
+import { baseProcedure, createTRPCRouter } from "../init";
 export const appRouter = createTRPCRouter({
   invoke: baseProcedure
     .input(
