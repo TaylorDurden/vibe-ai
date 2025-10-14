@@ -5,6 +5,6 @@ import React from "react";
 
 export const Client = () => {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.hello.queryOptions({ text: "from taylor" }));
+  const { data } = useSuspenseQuery(trpc.hello.queryOptions({ text: "from tRPC" }));
   return <div>{JSON.stringify(data)}</div>;
 };
