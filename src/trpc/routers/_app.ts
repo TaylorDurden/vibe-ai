@@ -1,6 +1,26 @@
 import { z } from "zod";
+import { inngest } from "@/inngest/client";
 import { baseProcedure, createTRPCRouter } from "../init";
 export const appRouter = createTRPCRouter({
+  invoke: baseProcedure
+    .input(
+      z.object({
+        text: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await inngest.send({
+          name: "test/hello.world",
+          data: {
+            email: input.text,
+          },
+        });
+        return { success: true, eventIds: result.ids };
+      } catch (error) {
+        throw new Error(`Failed to send Inngest event: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }),
   hello: baseProcedure
     .input(
       z.object({
