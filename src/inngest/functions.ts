@@ -2,6 +2,13 @@ import OpenAI from "openai";
 
 import { inngest } from "./client";
 
+/**
+ * Create an OpenAI client configured from environment variables.
+ *
+ * Chooses `DEEPSEEK_API_KEY` if present; otherwise uses `OPENAI_API_KEY`. When `DEEPSEEK_API_KEY` is used, the client is configured with `baseURL` from `DEEPSEEK_BASE_URL`. When `OPENAI_API_KEY` is used, the client is configured with `model: "gpt-4o"`.
+ *
+ * @returns An `OpenAI` client configured with the selected API key and corresponding options (`baseURL` for DeepSeek, otherwise `model: "gpt-4o"`).
+ */
 export function getAIClient() {
   const isDeepSeek = process.env.DEEPSEEK_API_KEY;
   return new OpenAI({
