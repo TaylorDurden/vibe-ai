@@ -20,15 +20,18 @@ export const helloWorld = inngest.createFunction(
     const result = await step.run(
       "summarizer-agent",
       async (input) => {
+        const model =
+          process.env.DEEPSEEK_API_KEY ? "deepseek-reasoner" : "gpt-4o";
+        const userContent =
+          typeof input === "string" ? input : JSON.stringify(input);
         const completion = await openai.chat.completions.create({
           messages: [
             { role: "system", content: system_prompt },
-            { role: "user", content: input },
+            { role: "user", content: userContent },
           ],
-          model: "deepseek-reasoner",
+          model,
         });
-        const content = completion.choices[0].message.content;
-
+        const content = completion.choices?.[0]?.message?.content ?? "";
         return content;
       },
       event.data.value
