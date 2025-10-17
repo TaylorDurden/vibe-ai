@@ -23,6 +23,9 @@ export default function Home() {
       onSuccess: () => {
         toast.success("Background job started!");
       },
+      onError: (error) => {
+        toast.error(`Failed to start job: ${error.message}`);
+      },
     })
   );
   return (
