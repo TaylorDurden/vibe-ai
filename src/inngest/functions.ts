@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { inngest } from "./client";
 
 export function getAIClient() {
-  const isDeepSeek = process.env.DEEPSEEK_API_KEY;
+  const isDeepSeek = !!process.env.DEEPSEEK_API_KEY;
   return new OpenAI({
     apiKey: isDeepSeek ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY,
     ...(isDeepSeek ? { baseURL: process.env.DEEPSEEK_BASE_URL } : { model: "gpt-4o" }),
