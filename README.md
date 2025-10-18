@@ -34,3 +34,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## E2B Code Sandbox
+
+1. npm i -g @e2b/cli
+2. e2b auth login
+3. cd sandbox-templates/nextjs
+4. e2b template build --name vibeai-nextjs-test-01 --cmd "/compile_page.sh"
+5. e2b template publish -t {your_team_id}
+6. npm i @e2b/code-interpreter
