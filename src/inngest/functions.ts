@@ -146,8 +146,8 @@ export const helloWorld = inngest.createFunction(
       return {
         title: "Fragment",
         url: sandboxUrl,
-        files: networkResult,
-        summary: networkResult,
+        files: networkResult.state.data.files,
+        summary: networkResult.state.data.summary,
       };
     } else {
       // 正确定义工具类型
