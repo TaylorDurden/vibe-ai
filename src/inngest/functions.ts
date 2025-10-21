@@ -37,6 +37,11 @@ export const helloWorld = inngest.createFunction(
                 const buffers = { stdout: "", stderr: "" };
 
                 try {
+                  // Basic allowlist to reduce risk
+                  const ALLOW = [/^npm\s+(?:install|i)\b/i, /^ls\b/i, /^cat\b/i, /^echo\b/i];
+                  if (!ALLOW.some((rx) => rx.test(command.trim()))) {
+                    return `Blocked command by policy: ${command}`;
+                  }
                   const sandbox = await getSandbox(sandboxId);
                   const result = await sandbox.commands.run(command, {
                     onStdout: (data: string) => {
