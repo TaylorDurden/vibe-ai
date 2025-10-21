@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 import Sandbox from "@e2b/code-interpreter";
+import { AgentResult, TextMessage } from "@inngest/agent-kit";
 
 export async function getSandbox(sandboxId: string) {
   const sandbox = await Sandbox.connect(sandboxId);
@@ -20,4 +21,19 @@ export function getAIClient() {
     apiKey: isDeepSeek ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY,
     ...(isDeepSeek ? { baseURL: process.env.DEEPSEEK_BASE_URL } : { model: "gpt-4o" }),
   });
+}
+
+/**
+ * Extracts the content of the last assistant text message from an AgentResult.
+ * @param result The AgentResult object to process.
+ * @returns The content of the last assistant text message as a string, or undefined if not found.
+ */
+export function lastAssistantTextMessageContent(result: AgentResult) {
+  const lastAssistantTextMessageIndex = result.output.findLastIndex((message) => message.role === "assistant");
+  const message = result.output[lastAssistantTextMessageIndex] as TextMessage | undefined;
+  return message?.content
+    ? typeof message.content === "string"
+      ? message.content
+      : message.content.map((c) => c.text).join("")
+    : undefined;
 }
