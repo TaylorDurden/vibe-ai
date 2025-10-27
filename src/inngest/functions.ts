@@ -5,6 +5,7 @@ import { getAIClient, getSandbox, lastAssistantTextMessageContent } from "./util
 import { z } from "zod";
 import { PROMPT } from "@/prompt";
 import OpenAI from "openai";
+import prisma from "@/lib/prisma";
 
 export const helloWorld = inngest.createFunction(
   { id: "hello-world" },
@@ -101,6 +102,10 @@ export const helloWorld = inngest.createFunction(
                   const sandbox = await getSandbox(sandboxId);
                   const contents = [];
                   for (const file of files) {
+                    // Validate paths (allow both relative and /home/user/* since PROMPT mentions both)
+                    if (file.includes("..") || (!file.startsWith("/home/user") && file.startsWith("/"))) {
+                      throw new Error(`Invalid path: ${file}`);
+                    }
                     const content = await sandbox.files.read(file);
                     contents.push({ path: file, content });
                   }
@@ -146,6 +151,22 @@ export const helloWorld = inngest.createFunction(
         const sandbox = await getSandbox(sandboxId);
         const host = sandbox.getHost(3000);
         return `https://${host}`;
+      });
+      await step.run("save-result", async () => {
+        return await prisma.message.create({
+          data: {
+            content: networkResult.state.data.summary,
+            role: "ASSISTANT",
+            type: "RESULT",
+            Fragment: {
+              create: {
+                sandboxUrl: sandboxUrl,
+                files: networkResult.state.data.files,
+                title: "Fragment",
+              },
+            },
+          },
+        });
       });
       // 返回结果
       return {
@@ -247,6 +268,11 @@ export const helloWorld = inngest.createFunction(
             return await step.run("terminal", async () => {
               const buffers = { stdout: "", stderr: "" };
               try {
+                // Basic allowlist to reduce risk (same as non-deepseek branch)
+                const ALLOW = [/^npm\s+(?:install|i)\b/i, /^ls\b/i, /^cat\b/i, /^echo\b/i];
+                if (!ALLOW.some((rx) => rx.test(args.command.trim()))) {
+                  return `Blocked command by policy: ${args.command}`;
+                }
                 const sandbox = await getSandbox(sandboxId);
                 const result = await sandbox.commands.run(args.command, {
                   onStdout: (data: string) => {
@@ -425,6 +451,23 @@ export const helloWorld = inngest.createFunction(
         const sandbox = await getSandbox(sandboxId);
         const host = sandbox.getHost(3000);
         return `https://${host}`;
+      });
+
+      await step.run("save-result", async () => {
+        return await prisma.message.create({
+          data: {
+            content: state.summary,
+            role: "ASSISTANT",
+            type: "RESULT",
+            Fragment: {
+              create: {
+                sandboxUrl: sandboxUrl,
+                files: state.files,
+                title: "Fragment",
+              },
+            },
+          },
+        });
       });
 
       // 返回结果
