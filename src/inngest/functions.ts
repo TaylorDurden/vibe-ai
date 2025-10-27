@@ -297,9 +297,13 @@ export const helloWorld = inngest.createFunction(
                   await sandbox.files.write(file.path, file.content);
                   state.files[file.path] = file.content;
                 }
-                return `Successfully created/updated ${args.files.length} files: ${args.files
-                  .map((f: any) => f.path)
-                  .join(", ")}`;
+                // Return the updated state.files as a stringified JSON
+                return JSON.stringify({
+                  message: `Successfully created/updated ${args.files.length} files: ${args.files
+                    .map((f: any) => f.path)
+                    .join(", ")}`,
+                  files: state.files,
+                });
               } catch (error) {
                 return `Error: ${error}`;
               }
@@ -407,6 +411,19 @@ export const helloWorld = inngest.createFunction(
           const result = await handleToolCall(toolCall);
           // 确保 content 是字符串类型
           const resultContent = String(result);
+
+          // Check if this was a createOrUpdateFiles call and update state.files
+          if (toolCall.function?.name === "createOrUpdateFiles") {
+            try {
+              const parsedResult = JSON.parse(resultContent);
+              if (parsedResult.files) {
+                state.files = parsedResult.files;
+              }
+            } catch (e) {
+              console.error("Failed to parse createOrUpdateFiles result:", e);
+            }
+          }
+
           toolResults.push({
             tool_call_id: toolCall.id,
             role: "tool",
@@ -426,7 +443,6 @@ export const helloWorld = inngest.createFunction(
           finalResult = lastToolContent;
           break;
         }
-
         // 检查最后一条助手消息是否有总结
         const lastAssistantMessage = messages
           .filter((m): m is OpenAI.ChatCompletionAssistantMessageParam => m.role === "assistant")
@@ -469,6 +485,7 @@ export const helloWorld = inngest.createFunction(
           },
         });
       });
+      console.log(`state: ${JSON.stringify(state)}`);
 
       // 返回结果
       return {
