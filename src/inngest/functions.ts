@@ -413,7 +413,7 @@ export const helloWorld = inngest.createFunction(
           const resultContent = String(result);
 
           // Check if this was a createOrUpdateFiles call and update state.files
-          if (toolCall.function?.name === "createOrUpdateFiles") {
+          if ((toolCall as OpenAI.ChatCompletionMessageFunctionToolCall)?.function?.name === "createOrUpdateFiles") {
             try {
               const parsedResult = JSON.parse(resultContent);
               if (parsedResult.files) {
