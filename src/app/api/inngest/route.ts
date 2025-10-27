@@ -1,5 +1,5 @@
 import { serve } from "inngest/next";
-import { helloWorld } from "@/inngest/functions";
+import { codeAgent } from "@/inngest/functions";
 import { inngest } from "@/inngest/client";
 
 if (process.env.NODE_ENV === "production" && !process.env.INNGEST_SIGNING_KEY) {
@@ -11,7 +11,7 @@ export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [
     /* your functions will be passed here later! */
-    helloWorld,
+    codeAgent,
   ],
   signingKey: process.env.INNGEST_SIGNING_KEY,
 });

@@ -7,7 +7,7 @@ import { PROMPT } from "@/prompt";
 import OpenAI from "openai";
 import prisma from "@/lib/prisma";
 
-export const helloWorld = inngest.createFunction(
+export const codeAgent = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
   async ({ event, step }) => {
