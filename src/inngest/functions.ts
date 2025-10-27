@@ -8,8 +8,8 @@ import OpenAI from "openai";
 import prisma from "@/lib/prisma";
 
 export const helloWorld = inngest.createFunction(
-  { id: "hello-world" },
-  { event: "test/hello.world" },
+  { id: "code-agent" },
+  { event: "code-agent/run" },
   async ({ event, step }) => {
     const sandboxId = await step.run("get sandbox id", async () => {
       const sandbox = await Sandbox.create("vibeai-nextjs-test-01");
