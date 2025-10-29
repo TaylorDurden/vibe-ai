@@ -7,7 +7,7 @@ import { PROMPT } from "@/prompt";
 import OpenAI from "openai";
 import prisma from "@/lib/prisma";
 
-export const codeAgent = inngest.createFunction(
+export const codeAgentFunc = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
   async ({ event, step }) => {
@@ -152,9 +152,23 @@ export const codeAgent = inngest.createFunction(
         const host = sandbox.getHost(3000);
         return `https://${host}`;
       });
+      const isError =
+        !networkResult.state.data.summary || Object.keys(networkResult.state.data.files || {}).length === 0;
+
       await step.run("save-result", async () => {
+        if (isError) {
+          return await prisma.message.create({
+            data: {
+              projectId: event.data.projectId,
+              content: "Something went wrong, please try again.",
+              role: "ASSISTANT",
+              type: "ERROR",
+            },
+          });
+        }
         return await prisma.message.create({
           data: {
+            projectId: event.data.projectId,
             content: networkResult.state.data.summary,
             role: "ASSISTANT",
             type: "RESULT",
@@ -469,9 +483,22 @@ export const codeAgent = inngest.createFunction(
         return `https://${host}`;
       });
 
+      const isError = !state.summary || Object.keys(state.files || {}).length === 0;
+
       await step.run("save-result", async () => {
+        if (isError) {
+          return await prisma.message.create({
+            data: {
+              projectId: event.data.projectId,
+              content: "Something went wrong, please try again.",
+              role: "ASSISTANT",
+              type: "ERROR",
+            },
+          });
+        }
         return await prisma.message.create({
           data: {
+            projectId: event.data.projectId,
             content: state.summary,
             role: "ASSISTANT",
             type: "RESULT",
