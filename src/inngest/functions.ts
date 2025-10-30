@@ -5,10 +5,11 @@ import { getAIClient, getSandbox, lastAssistantTextMessageContent } from "./util
 import { z } from "zod";
 import { PROMPT } from "@/prompt";
 import OpenAI from "openai";
+import prisma from "@/lib/prisma";
 
-export const helloWorld = inngest.createFunction(
-  { id: "hello-world" },
-  { event: "test/hello.world" },
+export const codeAgentFunc = inngest.createFunction(
+  { id: "code-agent" },
+  { event: "code-agent/run" },
   async ({ event, step }) => {
     const sandboxId = await step.run("get sandbox id", async () => {
       const sandbox = await Sandbox.create("vibeai-nextjs-test-01");
@@ -101,6 +102,10 @@ export const helloWorld = inngest.createFunction(
                   const sandbox = await getSandbox(sandboxId);
                   const contents = [];
                   for (const file of files) {
+                    // Validate paths (allow both relative and /home/user/* since PROMPT mentions both)
+                    if (file.includes("..") || (!file.startsWith("/home/user") && file.startsWith("/"))) {
+                      throw new Error(`Invalid path: ${file}`);
+                    }
                     const content = await sandbox.files.read(file);
                     contents.push({ path: file, content });
                   }
@@ -146,6 +151,36 @@ export const helloWorld = inngest.createFunction(
         const sandbox = await getSandbox(sandboxId);
         const host = sandbox.getHost(3000);
         return `https://${host}`;
+      });
+      const isError =
+        !networkResult.state.data.summary || Object.keys(networkResult.state.data.files || {}).length === 0;
+
+      await step.run("save-result", async () => {
+        if (isError) {
+          return await prisma.message.create({
+            data: {
+              projectId: event.data.projectId,
+              content: "Something went wrong, please try again.",
+              role: "ASSISTANT",
+              type: "ERROR",
+            },
+          });
+        }
+        return await prisma.message.create({
+          data: {
+            projectId: event.data.projectId,
+            content: networkResult.state.data.summary,
+            role: "ASSISTANT",
+            type: "RESULT",
+            Fragment: {
+              create: {
+                sandboxUrl: sandboxUrl,
+                files: networkResult.state.data.files,
+                title: "Fragment",
+              },
+            },
+          },
+        });
       });
       // 返回结果
       return {
@@ -247,6 +282,11 @@ export const helloWorld = inngest.createFunction(
             return await step.run("terminal", async () => {
               const buffers = { stdout: "", stderr: "" };
               try {
+                // Basic allowlist to reduce risk (same as non-deepseek branch)
+                const ALLOW = [/^npm\s+(?:install|i)\b/i, /^ls\b/i, /^cat\b/i, /^echo\b/i];
+                if (!ALLOW.some((rx) => rx.test(args.command.trim()))) {
+                  return `Blocked command by policy: ${args.command}`;
+                }
                 const sandbox = await getSandbox(sandboxId);
                 const result = await sandbox.commands.run(args.command, {
                   onStdout: (data: string) => {
@@ -271,9 +311,13 @@ export const helloWorld = inngest.createFunction(
                   await sandbox.files.write(file.path, file.content);
                   state.files[file.path] = file.content;
                 }
-                return `Successfully created/updated ${args.files.length} files: ${args.files
-                  .map((f: any) => f.path)
-                  .join(", ")}`;
+                // Return the updated state.files as a stringified JSON
+                return JSON.stringify({
+                  message: `Successfully created/updated ${args.files.length} files: ${args.files
+                    .map((f: any) => f.path)
+                    .join(", ")}`,
+                  files: state.files,
+                });
               } catch (error) {
                 return `Error: ${error}`;
               }
@@ -381,6 +425,19 @@ export const helloWorld = inngest.createFunction(
           const result = await handleToolCall(toolCall);
           // 确保 content 是字符串类型
           const resultContent = String(result);
+
+          // Check if this was a createOrUpdateFiles call and update state.files
+          if ((toolCall as OpenAI.ChatCompletionMessageFunctionToolCall)?.function?.name === "createOrUpdateFiles") {
+            try {
+              const parsedResult = JSON.parse(resultContent);
+              if (parsedResult.files) {
+                state.files = parsedResult.files;
+              }
+            } catch (e) {
+              console.error("Failed to parse createOrUpdateFiles result:", e);
+            }
+          }
+
           toolResults.push({
             tool_call_id: toolCall.id,
             role: "tool",
@@ -400,7 +457,6 @@ export const helloWorld = inngest.createFunction(
           finalResult = lastToolContent;
           break;
         }
-
         // 检查最后一条助手消息是否有总结
         const lastAssistantMessage = messages
           .filter((m): m is OpenAI.ChatCompletionAssistantMessageParam => m.role === "assistant")
@@ -426,6 +482,37 @@ export const helloWorld = inngest.createFunction(
         const host = sandbox.getHost(3000);
         return `https://${host}`;
       });
+
+      const isError = !state.summary || Object.keys(state.files || {}).length === 0;
+
+      await step.run("save-result", async () => {
+        if (isError) {
+          return await prisma.message.create({
+            data: {
+              projectId: event.data.projectId,
+              content: "Something went wrong, please try again.",
+              role: "ASSISTANT",
+              type: "ERROR",
+            },
+          });
+        }
+        return await prisma.message.create({
+          data: {
+            projectId: event.data.projectId,
+            content: state.summary,
+            role: "ASSISTANT",
+            type: "RESULT",
+            Fragment: {
+              create: {
+                sandboxUrl: sandboxUrl,
+                files: state.files,
+                title: "Fragment",
+              },
+            },
+          },
+        });
+      });
+      console.log(`state: ${JSON.stringify(state)}`);
 
       // 返回结果
       return {
