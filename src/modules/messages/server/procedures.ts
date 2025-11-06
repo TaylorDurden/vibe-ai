@@ -4,8 +4,16 @@ import { baseProcedure, createTRPCRouter } from "@/trpc/init";
 import { z } from "zod";
 
 export const messagesRouter = createTRPCRouter({
-  getMany: baseProcedure.query(async () => {
+  getMany: baseProcedure
+    .input(
+      z.object({
+        projectId: z.uuid({ message: "Invalid project ID" }).min(1, { message: "Project ID is required" }),
+      })
+    ).query(async ({input}) => {
     const messages = await prisma.message.findMany({
+      where: {
+        projectId: input.projectId
+      },
       orderBy: {
         updatedAt: "desc",
       },

@@ -37,6 +37,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Prisma
 
+- npx prisma generate
 - npx prisma migrate reset 
 
 - npx prisma migrate dev
